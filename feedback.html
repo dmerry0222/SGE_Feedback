@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share Your Feedback</title>
+<style>
+  :root {
+    --text:#1f1f1f;
+    --muted:#5f6368;
+    --border:#d9dde3;
+    --bg:#ffffff;
+    --panel:#f7f8fa;
+    --accent:#4f3fb3;
+    --accent-disabled:#c9c5df;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:transparent; font-family:Segoe UI, Arial, sans-serif; color:var(--text); }
+  .card {
+    max-width:420px;
+    margin:0 auto;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+  }
+  h2 {
+    margin:0 0 8px;
+    font-size:24px;
+    line-height:1.15;
+  }
+  p {
+    margin:0 0 16px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.45;
+  }
+  label {
+    display:block;
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  select {
+    width:100%;
+    min-height:42px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fff;
+    padding:9px 10px;
+    font-size:15px;
+    color:var(--text);
+    margin-bottom:14px;
+  }
+  .btn {
+    display:inline-flex;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:42px;
+    padding:10px 14px;
+    border:0;
+    border-radius:8px;
+    background:var(--accent);
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .btn[aria-disabled="true"] {
+    background:var(--accent-disabled);
+    color:#fff;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
+  .hint {
+    margin-top:10px;
+    font-size:12px;
+    color:var(--muted);
+  }
+</style>
+</head>
+<body>
+  <section class="card" aria-labelledby="feedback-title">
+    <h2 id="feedback-title">Share your feedback</h2>
+    <p>Choose a topic from the list below to send your questions or feedback to the relevant members of the SGE Task Force.</p>
+
+    <label for="topic-select">Topic</label>
+    <select id="topic-select">
+      <option value="">Select a topic…</option>
+      <option>General Feedback</option>
+      <option>Governance &amp; Implementation</option>
+      <option>First Year Experience</option>
+      <option>Written Communication</option>
+      <option>Mathematics</option>
+      <option>Science &amp; Technology</option>
+      <option>Business &amp; Social Sciences</option>
+      <option>Humanities &amp; SGP</option>
+      <option>Career Development</option>
+      <option>Capstone</option>
+    </select>
+
+    <a id="send-btn" class="btn" href="#" aria-disabled="true">
+      <span aria-hidden="true">✉</span>
+      <span>Send questions or feedback</span>
+    </a>
+  </section>
+
+<script>
+const FEEDBACK = {"Governance & Implementation": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Governance & Implementation"}, "First Year Experience": {"emails": ["swebber@suffolk.edu", "amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: First Year Experience"}, "Written Communication": {"emails": ["rprakasam@suffolk.edu", "amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Written Communication"}, "Mathematics": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Mathematics"}, "Science & Technology": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Science & Technology"}, "Business & Social Sciences": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Business & Social Sciences"}, "Humanities & SGP": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Humanities & SGP"}, "Career Development": {"emails": ["dmerry@suffolk.edu", "nobrien@suffolk.edu", "amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Career Development"}, "Capstone": {"emails": ["mnhuvaj@suffolk.edu", "amcgehee@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal: Capstone"}, "General Feedback": {"emails": ["amcgehee@suffolk.edu", "mnhuvaj@suffolk.edu"], "subject": "Feedback about the Shared Gen Education revision proposal"}};
+
+const select = document.getElementById("topic-select");
+const button = document.getElementById("send-btn");
+
+select.addEventListener("change", () => {
+  const topic = select.value;
+  if (!topic || !FEEDBACK[topic]) {
+    button.setAttribute("aria-disabled", "true");
+    button.href = "#";
+    return;
+  }
+
+  const item = FEEDBACK[topic];
+  const to = item.emails.join(",");
+  const subject = encodeURIComponent(item.subject);
+  button.href = `mailto:${to}?subject=${subject}`;
+  button.setAttribute("aria-disabled", "false");
+});
+</script>
+</body>
+</html>
