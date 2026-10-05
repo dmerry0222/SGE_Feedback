@@ -135,9 +135,9 @@
           </p>
         </div>
         <div>
-          <h3>Feedback or questions about this topic?</h3>
+          <h3>Questions about this topic?</h3>
           <div id="contact-list" class="contact-list"></div>
-          <a id="email-btn" class="btn contact-action"><span aria-hidden="true">✉</span>  Share feedback about this topic </a>
+          <a id="email-btn" class="btn contact-action"><span aria-hidden="true">✉</span> Send questions or feedback</a>
         </div>
       </div>
 
@@ -192,6 +192,10 @@
    The Outlook deep-link helper currently assumes these October 2026 Boston dates
    are on EDT (UTC-4). That is correct for SGE Week 2026.
    If you reuse this file for winter dates, update localEasternToUtcIso() below.
+
+   BY-TOPIC VIEW:
+   Session option cards show day/date + time, then location. This is generated
+   automatically from each event's date/start/display fields.
 
    HOW TO ADD A NEW SESSION:
    Copy one whole event {...} in EVENTS and edit:
@@ -332,6 +336,12 @@ function dedupeContacts(topic){
   });
 }
 
+
+function formatSessionDate(dateStr){
+  const d=new Date(dateStr+"T12:00:00");
+  return d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+}
+
 function makeSessionButton(e, compact=false){
   const t=TOPICS[e.topic];
   const b=document.createElement("button");
@@ -346,7 +356,7 @@ function makeSessionButton(e, compact=false){
     b.style.color=t.text;
   }
   b.innerHTML=compact
-    ? `<div class="topic">${e.display}</div><div class="place">${e.location}</div>`
+    ? `<div class="time">${formatSessionDate(e.date)} · ${e.display}</div><div class="place">${e.location}</div>`
     : `<div class="time">${e.display}</div><div class="topic">${e.topic}</div><div class="place">${e.location}</div>`;
   b.addEventListener("click",()=>showDetail(e));
   return b;
