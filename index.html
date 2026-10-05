@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SGE Week Session Finder</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --panel:#f7f7f8;
+      --card:#ffffff;
+      --text:#1f2328;
+      --muted:#666b73;
+      --border:#d9dde3;
+      --accent:#6b4eff;
+      --accent-bg:#ece8ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1180px;margin:0 auto;padding:14px 16px 18px}
+    .top{display:flex;gap:14px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    h1{font-size:26px;line-height:1.15;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:14px}
+    .tabs{display:inline-flex;border:1px solid var(--border);border-radius:10px;padding:4px;background:var(--card)}
+    .tabs button{border:0;background:transparent;color:#2f3338;padding:9px 15px;border-radius:7px;font-weight:700;cursor:pointer}
+    .tabs button[aria-selected="true"]{background:#4f3fb3;color:#ffffff}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+    .day-head{border:1px solid var(--border);background:var(--card);border-radius:9px;padding:8px 10px;margin-bottom:6px}
+    .day-head b{display:block}
+    .day-head span{font-size:12px;color:var(--muted)}
+    .stack{display:grid;gap:6px}
+    .session{width:100%;border:1px solid rgba(0,0,0,.10);border-radius:9px;padding:10px;text-align:left;cursor:pointer}
+    .session .time{font-size:12px;font-weight:700;opacity:.9}
+    .session .topic{font-weight:700;line-height:1.15;margin-top:4px}
+    .session .place{font-size:12px;opacity:.9;margin-top:5px}
+    .topic-row{display:grid;grid-template-columns:minmax(200px,.9fr) minmax(0,2fr);gap:10px;margin-bottom:10px}
+    .topic-label{border-radius:10px;padding:14px;font-weight:700}
+    .topic-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+        .detail{margin-top:20px;border:1px solid var(--border);background:var(--panel);border-radius:14px;overflow:hidden}
+    .detail.hidden,.hidden{display:none!important}
+    .detail-head{padding:15px 16px}
+    .detail-head-inner{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+    .detail-title-line{display:flex;gap:8px;align-items:center}
+    .dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex:0 0 auto}
+    .detail h2{margin:0;font-size:22px}
+    .detail-time{font-weight:700;margin-top:8px}
+    .detail-location{font-size:14px;margin-top:4px}
+    .close{border:1px solid rgba(0,0,0,.15);background:rgba(255,255,255,.75);padding:9px 12px;border-radius:9px;font-weight:700;cursor:pointer}
+    .detail-body{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:15px 16px}
+    .detail-body h3{font-size:14px;margin:0 0 6px}
+    .detail-body p{font-size:14px;color:var(--muted);margin:0}
+    #materials-link{color:#0563C1;text-decoration:underline}
+    .contact-list{display:grid;gap:9px;margin-top:8px}
+    .contact-list a{color:inherit}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--border);padding:13px 16px}
+    .btn{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--border);border-radius:9px;padding:9px 14px;text-decoration:none;color:inherit;font-weight:700;background:var(--card);cursor:pointer}
+    .btn.primary{background:var(--accent-bg)}
+    .ics-fallback{align-self:center;font-size:12px;color:var(--muted);text-decoration:underline;margin-left:2px}
+    .contact-action{margin-top:14px}
+    .modal-overlay{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      background:rgba(255,255,255,.78);
+      backdrop-filter:blur(2px);
+      -webkit-backdrop-filter:blur(2px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .modal-card{
+      width:min(720px,100%);
+      max-height:calc(100vh - 32px);
+      overflow:auto;
+      margin:0;
+      box-shadow:0 18px 60px rgba(0,0,0,.22);
+      background:var(--panel);
+    }
+    body.modal-open{overflow:hidden}
+    .close{
+      font-size:26px;
+      line-height:1;
+      min-width:42px;
+      min-height:42px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.topic-row{grid-template-columns:1fr}.topic-options{grid-template-columns:1fr 1fr}}
+    @media(max-width:620px){.grid{grid-template-columns:1fr}.topic-options{grid-template-columns:1fr}.detail-body{grid-template-columns:1fr}.wrap{padding:14px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>SGE Week Feedback Session Schedule</h1>
+      <div class="sub">October 5–9, 2026 · Select any session for location, Zoom, materials, contacts, and calendar details.</div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Choose schedule view">
+      <button type="button" data-view="day" aria-selected="true">By day</button>
+      <button type="button" data-view="topic" aria-selected="false">By topic</button>
+    </div>
+  </div>
+
+  <section id="view-day"><div id="day-grid" class="grid"></div></section>
+  <section id="view-topic" class="hidden"><div id="topic-grid"></div></section>
+
+  <!-- EDITOR NOTE: Outlook discrepancy note removed from public-facing page. See source comments in EDITABLE SETTINGS if needed. -->
+
+  <!-- EDITOR NOTE:
+       The session popup is a modal overlay. If it ever stops opening after a hand-edit,
+       first check that the HTML element id="materials-link" still matches the JavaScript
+       line document.getElementById("materials-link").
+  -->
+  <div id="modal-overlay" class="modal-overlay hidden" aria-hidden="true">
+    <section id="session-detail" class="detail modal-card" role="dialog" aria-modal="true" aria-labelledby="detail-title" aria-live="polite">
+      <div id="detail-head" class="detail-head">
+        <div class="detail-head-inner">
+          <div>
+            <div class="detail-title-line"><span id="detail-dot" class="dot"></span><h2 id="detail-title"></h2></div>
+            <div id="detail-time" class="detail-time"></div>
+            <div id="detail-location" class="detail-location"></div>
+          </div>
+          <button id="close-detail" type="button" class="close" aria-label="Close session details">×</button>
+        </div>
+      </div>
+
+      <div class="detail-body">
+        <div>
+          <h3>Before the session</h3>
+          <p>You can find materials to review before this session located in
+            <a id="materials-link" href="#" target="_blank" rel="noopener"><strong>this shared folder</strong></a>.
+          </p>
+        </div>
+        <div>
+          <h3>Questions about this topic?</h3>
+          <div id="contact-list" class="contact-list"></div>
+          <a id="email-btn" class="btn contact-action"><span aria-hidden="true">✉</span>  Share feedback about this topic </a>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a id="zoom-btn" class="btn hidden" target="_blank" rel="noopener">Join Zoom</a>
+        <a id="outlook-btn" class="btn primary" target="_blank" rel="noopener">Add to Outlook calendar</a>
+        <a id="ics-fallback" href="#" class="ics-fallback">or download the .ics file</a>
+      </div>
+    </section>
+  </div>
+
+  <!-- EDITOR NOTE: Public editing guide intentionally hidden. Use the clearly marked EDITABLE SETTINGS section in the script below for spot-edits. -->
+</div>
+
+<script>
+/* ============================================================
+   EDITABLE SETTINGS — SAFE PLACE FOR MOST SPOT-EDITS
+   ============================================================
+
+   HOW TO CHANGE A SESSION DATE/TIME:
+   - date:  "2026-10-07"
+   - start: "11:00"   (24-hour clock)
+   - end:   "12:00"   (24-hour clock)
+   - display: "11:00 a.m.–12:00 p.m."  <-- this is only the visible label
+
+   IMPORTANT:
+   The .ics file uses date/start/end automatically.
+   If you change date/start/end, the calendar file changes too.
+
+   HOW TO CHANGE CONTACTS:
+   Each topic has:
+      contacts:[{name:"Person", email:"person@suffolk.edu", title:"Job Title"}]
+
+   Add another person by inserting another object, for example:
+      {name:"Jane Smith", email:"jsmith@suffolk.edu", title:"Professor"}
+
+   Remove someone by deleting that person's object.
+
+   The Email button and the .ics description are generated from these lists.
+
+   HOW TO CHANGE MATERIALS LINK:
+   Change MATERIALS_URL below.
+
+   OUTLOOK BUTTON:
+   The primary calendar action now opens a pre-filled Outlook Web event.
+   The small .ics link remains as a fallback.
+   For sessions with a Zoom URL, the calendar LOCATION field is the Zoom URL itself.
+   Calendar descriptions intentionally include materials/Zoom information only;
+   the public-facing contact list stays in the website modal.
+
+   TIMEZONE NOTE:
+   The Outlook deep-link helper currently assumes these October 2026 Boston dates
+   are on EDT (UTC-4). That is correct for SGE Week 2026.
+   If you reuse this file for winter dates, update localEasternToUtcIso() below.
+
+   HOW TO ADD A NEW SESSION:
+   Copy one whole event {...} in EVENTS and edit:
+   id, topic, day, date, start, end, display, location, and optional zoom.
+   ============================================================ */
+
+const MATERIALS_URL = "https://sumail.sharepoint.com/:f:/s/SGETaskforce/IgDe3hKPADC7SpYi3gt5VwxYAXfHvCeZI1qMHYp6ktREXpU";
+
+const CO_CHAIRS = [
+  {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor", role:"SGE Committee Co-chair"},
+  {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor", role:"SGE Committee Co-chair"}
+];
+
+const TOPICS = {
+  "Governance & Implementation":{
+    color:"#454545", text:"#FFFFFF",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "First Year Experience":{
+    color:"#E86621", text:"#FFFFFF",
+    contacts:[
+      {name:"Sheila S. Webber", email:"swebber@suffolk.edu", title:"Professor"}
+    ]
+  },
+
+  "Written Communication":{
+    color:"#C9342C", text:"#FFFFFF",
+    contacts:[
+      {name:"Ruth Prakasam", email:"rprakasam@suffolk.edu", title:"Senior Instructor"}
+    ]
+  },
+
+  "Mathematics":{
+    color:"#CDBCE8", text:"#30255A",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"},
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "Science & Technology":{
+    color:"#148E88", text:"#FFFFFF",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"},
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "Business & Social Sciences":{
+    color:"#D8BA8B", text:"#493722",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"},
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "Humanities & SGP":{
+    color:"#6F2394", text:"#FFFFFF",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"},
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "Career Development":{
+    color:"#F3AFC7", text:"#721139",
+    contacts:[
+      {name:"Dave Merry", email:"dmerry@suffolk.edu", title:"Associate Provost"},
+      {name:"Nicole O'Brien", email:"nobrien@suffolk.edu", title:"Assistant Professor of Practice"}
+    ]
+  },
+
+  "Capstone":{
+    color:"#7C574A", text:"#FFFFFF",
+    contacts:[
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  },
+
+  "Open Session":{
+    color:"#2D7D45", text:"#FFFFFF",
+    contacts:[
+      {name:"Annette M. McGehee", email:"amcgehee@suffolk.edu", title:"Associate Professor"},
+      {name:"M. Nesij Huvaj", email:"mnhuvaj@suffolk.edu", title:"Associate Professor"}
+    ]
+  }
+};
+
+const EVENTS = [
+  {id:"gov-mon", topic:"Governance & Implementation", day:"Monday", date:"2026-10-05", start:"14:00", end:"15:00", display:"2:00–3:00 p.m.", location:"Samia 619"},
+  {id:"open-tue", topic:"Open Session", day:"Tuesday", date:"2026-10-06", start:"10:00", end:"11:00", display:"10:00–11:00 a.m.", location:"Samia 619"},
+  {id:"math-tue", topic:"Mathematics", day:"Tuesday", date:"2026-10-06", start:"12:30", end:"13:30", display:"12:30–1:30 p.m.", location:"Samia 519"},
+  {id:"cap-tue", topic:"Capstone", day:"Tuesday", date:"2026-10-06", start:"15:00", end:"16:00", display:"3:00–4:00 p.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/j/98017813670?pwd=7Kbh7tTUigsqJxHhbEc6vlh94fAhjc.1"},
+  {id:"career-wed", topic:"Career Development", day:"Wednesday", date:"2026-10-07", start:"11:00", end:"12:00", display:"11:00 a.m.–12:00 p.m.", location:"Career Center"},
+  {id:"bss-wed", topic:"Business & Social Sciences", day:"Wednesday", date:"2026-10-07", start:"14:15", end:"15:15", display:"2:15–3:15 p.m.", location:"73 Tremont, Room 5030"},
+  {id:"fye-wed", topic:"First Year Experience", day:"Wednesday", date:"2026-10-07", start:"15:30", end:"16:30", display:"3:30–4:30 p.m.", location:"73 Tremont, Room 5035"},
+  {id:"gov-thu", topic:"Governance & Implementation", day:"Thursday", date:"2026-10-08", start:"09:30", end:"10:30", display:"9:30–10:30 a.m.", location:"Samia 619"},
+  {id:"hum-thu", topic:"Humanities & SGP", day:"Thursday", date:"2026-10-08", start:"12:00", end:"13:00", display:"12:00–1:00 p.m.", location:"Samia 417K"},
+  {id:"wri-thu", topic:"Written Communication", day:"Thursday", date:"2026-10-08", start:"12:30", end:"13:30", display:"12:30–1:30 p.m.", location:"Samia 619 + Zoom", zoom:"https://suffolk.zoom.us/j/93050975353"},
+  {id:"sci-thu", topic:"Science & Technology", day:"Thursday", date:"2026-10-08", start:"12:30", end:"13:30", display:"12:30–1:30 p.m.", location:"Samia 519"},
+  {id:"cap-thu", topic:"Capstone", day:"Thursday", date:"2026-10-08", start:"14:00", end:"15:00", display:"2:00–3:00 p.m.", location:"73 Tremont, Room 1102"},
+  {id:"career-thu", topic:"Career Development", day:"Thursday", date:"2026-10-08", start:"15:00", end:"16:00", display:"3:00–4:00 p.m.", location:"Career Center"},
+  {id:"hum-fri", topic:"Humanities & SGP", day:"Friday", date:"2026-10-09", start:"09:45", end:"10:45", display:"9:45–10:45 a.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/j/2052662598?omn=97917602360"},
+  {id:"wri-fri", topic:"Written Communication", day:"Friday", date:"2026-10-09", start:"10:00", end:"11:00", display:"10:00–11:00 a.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/j/92731531561"},
+  {id:"fye-fri", topic:"First Year Experience", day:"Friday", date:"2026-10-09", start:"11:00", end:"12:00", display:"11:00 a.m.–12:00 p.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/j/94358459894"},
+  {id:"bss-fri", topic:"Business & Social Sciences", day:"Friday", date:"2026-10-09", start:"12:00", end:"13:00", display:"12:00–1:00 p.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/j/98787945847"},
+  {id:"open-fri", topic:"Open Session", day:"Friday", date:"2026-10-09", start:"13:00", end:"14:00", display:"1:00–2:00 p.m.", location:"Zoom", zoom:"https://suffolk.zoom.us/s/95812032865"}
+];
+
+/* PUBLIC-FACING CLEANUP NOTES
+   - The old "Friday Written Communication discrepancy / missing Friday Capstone"
+     notice is intentionally not shown on the page.
+   - The old visible editing guide is intentionally not shown on the page.
+   - Keep using this EDITABLE SETTINGS block for spot-edits.
+*/
+
+/* ===========================
+   END EDITABLE SETTINGS
+   =========================== */
+
+const DAYS = [
+  ["Monday","October 5"],
+  ["Tuesday","October 6"],
+  ["Wednesday","October 7"],
+  ["Thursday","October 8"],
+  ["Friday","October 9 · Zoom sessions"]
+];
+
+function dedupeContacts(topic){
+  const seen = new Set();
+  return [...TOPICS[topic].contacts, ...CO_CHAIRS].filter(c=>{
+    const key=c.email.toLowerCase();
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
+function makeSessionButton(e, compact=false){
+  const t=TOPICS[e.topic];
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="session";
+  if(compact){
+    b.style.background="#FFFFFF";
+    b.style.color="#111111";
+    b.style.border=`2px solid ${t.color}`;
+  } else {
+    b.style.background=t.color;
+    b.style.color=t.text;
+  }
+  b.innerHTML=compact
+    ? `<div class="topic">${e.display}</div><div class="place">${e.location}</div>`
+    : `<div class="time">${e.display}</div><div class="topic">${e.topic}</div><div class="place">${e.location}</div>`;
+  b.addEventListener("click",()=>showDetail(e));
+  return b;
+}
+
+const dayGrid=document.getElementById("day-grid");
+DAYS.forEach(([day,label])=>{
+  const col=document.createElement("section");
+  const head=document.createElement("div");
+  head.className="day-head";
+  head.innerHTML=`<b>${day}</b><span>${label}</span>`;
+  col.appendChild(head);
+  const stack=document.createElement("div");
+  stack.className="stack";
+  EVENTS.filter(e=>e.day===day).forEach(e=>stack.appendChild(makeSessionButton(e)));
+  col.appendChild(stack);
+  dayGrid.appendChild(col);
+});
+
+const topicGrid=document.getElementById("topic-grid");
+Object.keys(TOPICS).forEach(topic=>{
+  const row=document.createElement("div");
+  row.className="topic-row";
+  const label=document.createElement("div");
+  label.className="topic-label";
+  label.style.background=TOPICS[topic].color;
+  label.style.color=TOPICS[topic].text;
+  label.textContent=topic;
+  const opts=document.createElement("div");
+  opts.className="topic-options";
+  EVENTS.filter(e=>e.topic===topic).forEach(e=>opts.appendChild(makeSessionButton(e,true)));
+  row.append(label,opts);
+  topicGrid.appendChild(row);
+});
+
+document.querySelectorAll(".tabs button").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tabs button").forEach(t=>t.setAttribute("aria-selected",String(t===tab)));
+    document.getElementById("view-day").classList.toggle("hidden",tab.dataset.view!=="day");
+    document.getElementById("view-topic").classList.toggle("hidden",tab.dataset.view!=="topic");
+  });
+});
+
+let selected=null;
+
+function readableDate(e){
+  const [y,m,d]=e.date.split("-").map(Number);
+  const date=new Date(y,m-1,d,12,0,0);
+  return `${e.day}, ${date.toLocaleDateString("en-US",{month:"long",day:"numeric"})} · ${e.display}`;
+}
+
+function showDetail(e){
+  selected=e;
+  const t=TOPICS[e.topic];
+  const head=document.getElementById("detail-head");
+  head.style.background=t.color;
+  head.style.color=t.text;
+  document.getElementById("detail-dot").style.background=t.text;
+  document.getElementById("detail-title").textContent=e.topic;
+  document.getElementById("detail-time").textContent=readableDate(e);
+  document.getElementById("detail-location").textContent=e.location;
+  document.getElementById("materials-link").href=MATERIALS_URL;
+
+  const contacts=dedupeContacts(e.topic);
+  const contactList=document.getElementById("contact-list");
+  contactList.innerHTML="";
+  contacts.forEach(c=>{
+    const row=document.createElement("div");
+    const isChair=CO_CHAIRS.some(x=>x.email===c.email);
+    const chairLabel=isChair ? " · SGE Committee Co-chair" : "";
+    row.innerHTML=`<div><strong>${c.name}</strong></div>${isChair ? `<div>SGE Committee Co-chair</div>` : ""}${c.title ? `<div><em>${c.title}</em></div>` : ""}`;
+    contactList.appendChild(row);
+  });
+
+  const recipients=contacts.map(c=>c.email).join(",");
+  document.getElementById("email-btn").href=`mailto:${recipients}?subject=${encodeURIComponent("SGE Week – "+e.topic+" question")}`;
+
+  const zoom=document.getElementById("zoom-btn");
+  if(e.zoom){zoom.href=e.zoom;zoom.classList.remove("hidden");}
+  else{zoom.classList.add("hidden");}
+
+  const overlay=document.getElementById("modal-overlay");
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden","false");
+  document.body.classList.add("modal-open");
+  document.getElementById("close-detail").focus();
+}
+
+function closeModal(){
+  const overlay=document.getElementById("modal-overlay");
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden","true");
+  document.body.classList.remove("modal-open");
+}
+
+document.getElementById("close-detail").addEventListener("click",closeModal);
+
+document.getElementById("modal-overlay").addEventListener("click",(e)=>{
+  if(e.target===e.currentTarget) closeModal();
+});
+
+document.addEventListener("keydown",(e)=>{
+  if(e.key==="Escape" && !document.getElementById("modal-overlay").classList.contains("hidden")){
+    closeModal();
+  }
+});
+
+function icsTime(date,time){return date.replaceAll("-","")+"T"+time.replace(":","")+"00";}
+function esc(v){return String(v).replaceAll("\\","\\\\").replaceAll(";","\\;").replaceAll(",","\\,").replaceAll("\n","\\n");}
+
+
+function buildIcsData(selected){
+  const desc=[
+    `SGE Week – ${selected.topic}`,
+    "",
+    `Review materials before the session: ${MATERIALS_URL}`,
+    selected.zoom ? `Zoom: ${selected.zoom}` : ""
+  ].filter(x=>x!=="").join("\n");
+
+  const location=selected.zoom ? selected.zoom : selected.location;
+  const now=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Suffolk University//SGE Week//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-TIMEZONE:America/New_York",
+    "BEGIN:VEVENT",
+    `UID:sge-${selected.id}-2026@suffolk.edu`,
+    `DTSTAMP:${now}`,
+    `DTSTART;TZID=America/New_York:${icsTime(selected.date,selected.start)}`,
+    `DTEND;TZID=America/New_York:${icsTime(selected.date,selected.end)}`,
+    `SUMMARY:${esc("SGE Week – "+selected.topic)}`,
+    `LOCATION:${esc(location)}`,
+    `DESCRIPTION:${esc(desc)}`,
+    selected.zoom ? `URL:${selected.zoom}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].filter(Boolean).join("\r\n");
+}
+
+function downloadIcs(selected){
+  const data=buildIcsData(selected);
+  const blob=new Blob([data],{type:"text/calendar;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`SGE-${selected.topic.replace(/[^a-z0-9]+/gi,"-")}-${selected.date}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function localEasternToUtcIso(date,time){
+  // SGE Week dates are in Boston/Eastern time. October 5–9, 2026 is EDT (UTC-4).
+  // If this widget is reused for dates outside daylight time, update the offset logic.
+  const [y,m,d]=date.split("-").map(Number);
+  const [hh,mm]=time.split(":").map(Number);
+  const utcMs=Date.UTC(y,m-1,d,hh+4,mm,0);
+  return new Date(utcMs).toISOString().replace(".000Z","Z");
+}
+
+function buildOutlookComposeUrl(selected){
+  const body=[
+    `Review materials before the session: ${MATERIALS_URL}`,
+    selected.zoom ? `Zoom: ${selected.zoom}` : ""
+  ].filter(x=>x!=="").join("\n");
+
+  const params=new URLSearchParams({
+    path:"/calendar/action/compose",
+    rru:"addevent",
+    subject:`SGE Week – ${selected.topic}`,
+    startdt:localEasternToUtcIso(selected.date,selected.start),
+    enddt:localEasternToUtcIso(selected.date,selected.end),
+    location:selected.zoom ? selected.zoom : selected.location,
+    body:body
+  });
+  return `https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
+function updateCalendarActions(){
+  if(!selected) return;
+  document.getElementById("outlook-btn").href=buildOutlookComposeUrl(selected);
+  document.getElementById("ics-fallback").onclick=(e)=>{
+    e.preventDefault();
+    downloadIcs(selected);
+  };
+}
+
+const originalShowDetail=showDetail;
+showDetail=function(e){
+  originalShowDetail(e);
+  updateCalendarActions();
+};
+
+</script>
+</body>
+</html>
